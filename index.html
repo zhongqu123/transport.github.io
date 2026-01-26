@@ -1,47 +1,474 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <title>文本传输API</title>
-    <script>
-        // 页面加载时自动处理URL参数
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const text = urlParams.get('trans');
-            
-            if (text) {
-                // 处理文本（示例：转为大写）
-                const processedText = text.toUpperCase();
-                
-                // 返回JSON
-                const response = {
-                    status: "success",
-                    originalText: text,
-                    processedText: processedText,
-                    timestamp: new Date().toISOString()
-                };
-                
-                // 直接输出JSON（兼容API调用）
-                document.body.innerHTML = `<pre>${JSON.stringify(response, null, 2)}</pre>`;
-                
-                // 如果是API调用，设置Content-Type（实际GitHub Pages无法修改HTTP头，但浏览器能正确解析）
-                try {
-                    document.contentType = "application/json";
-                } catch(e) {}
-            } else {
-                document.body.innerHTML = `
-                    <h1>文本传输API</h1>
-                    <p>使用方式：<code>${window.location.host}?trans=你的文本</code></p>
-                    <p>示例：<a href="?trans=HelloWorld">${window.location.host}?trans=HelloWorld</a></p>
-                `;
-            }
-        };
-    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文本存储系统</title>
     <style>
-        body { font-family: Arial; max-width: 800px; margin: 0 auto; padding: 20px; }
-        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+        
+        .api-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .api-info h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        
+        .test-interface {
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .json-result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-    <!-- 内容由JavaScript动态生成 -->
+    <div class="container">
+        <h1>📝 文本存储系统</h1>
+        
+        <div class="api-info">
+            <h3>API 使用说明</h3>
+            <p><strong>URL格式:</strong> <code>你的域名?accounts=用户名&mode=模式&text=文本</code></p>
+            
+            <div class="code-block">
+// 写入文本
+https://你的域名/?accounts=张三&mode=w&text=你好世界
+
+// 读取文本  
+https://你的域名/?accounts=张三&mode=r
+
+// 续写文本
+https://你的域名/?accounts=张三&mode=cw&text=这是追加的内容
+            </div>
+            
+            <p><strong>模式说明:</strong></p>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li><code>r</code> - 读取：获取指定账号的文本内容</li>
+                <li><code>w</code> - 写入：覆盖写入新文本（需要text参数）</li>
+                <li><code>cw</code> - 续写：在现有文本后追加内容（需要text参数）</li>
+            </ul>
+        </div>
+
+        <div class="test-interface">
+            <h3>🧪 测试接口</h3>
+            
+            <div class="input-group">
+                <label for="accounts">账号 (accounts):</label>
+                <input type="text" id="accounts" placeholder="请输入用户名" value="testuser">
+            </div>
+            
+            <div class="input-group">
+                <label for="mode">模式 (mode):</label>
+                <select id="mode">
+                    <option value="r">读取 (r)</option>
+                    <option value="w">写入 (w)</option>
+                    <option value="cw">续写 (cw)</option>
+                </select>
+            </div>
+            
+            <div class="input-group" id="textInputGroup">
+                <label for="text">文本内容 (text):</label>
+                <input type="text" id="text" placeholder="请输入要存储的文本" value="这是一段测试文本">
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-primary" onclick="testAPI()">测试API</button>
+                <button class="btn-secondary" onclick="generateURL()">生成URL</button>
+            </div>
+            
+            <div id="urlResult" class="result">
+                <h4>生成的URL:</h4>
+                <div class="code-block" id="generatedURL"></div>
+                <button class="copy-btn" onclick="copyURL()">复制URL</button>
+            </div>
+            
+            <div id="apiResult" class="result">
+                <h4>API响应:</h4>
+                <div class="json-result" id="jsonResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时处理URL参数
+        window.addEventListener('load', function() {
+            processURLParameters();
+            updateUI();
+        });
+        
+        // 根据模式显示/隐藏文本输入框
+        function updateUI() {
+            const mode = document.getElementById('mode').value;
+            const textInputGroup = document.getElementById('textInputGroup');
+            
+            if (mode === 'r') {
+                textInputGroup.style.display = 'none';
+            } else {
+                textInputGroup.style.display = 'block';
+            }
+        }
+        
+        // 处理URL参数
+        function processURLParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const accounts = urlParams.get('accounts');
+            const mode = urlParams.get('mode');
+            const text = urlParams.get('text');
+            
+            if (accounts && mode) {
+                // 自动填充表单
+                if (accounts) document.getElementById('accounts').value = accounts;
+                if (mode) document.getElementById('mode').value = mode;
+                if (text) document.getElementById('text').value = text;
+                
+                updateUI();
+                
+                // 执行API操作
+                executeAPIOperation(accounts, mode, text);
+            }
+        }
+        
+        // 执行API操作
+        function executeAPIOperation(accounts, mode, text) {
+            let result;
+            
+            try {
+                // 参数验证
+                if (!accounts) {
+                    throw new Error('缺少必要参数: accounts');
+                }
+                
+                if (!mode) {
+                    throw new Error('缺少必要参数: mode');
+                }
+                
+                if (mode !== 'r' && !text) {
+                    throw new Error(`模式 "${mode}" 需要 text 参数`);
+                }
+                
+                // 执行操作
+                switch(mode) {
+                    case 'r':
+                        result = readText(accounts);
+                        break;
+                    case 'w':
+                        result = writeText(accounts, text);
+                        break;
+                    case 'cw':
+                        result = appendText(accounts, text);
+                        break;
+                    default:
+                        throw new Error(`不支持的模式: ${mode}`);
+                }
+                
+                // 返回JSON响应
+                returnJSONResponse(result);
+                
+            } catch (error) {
+                returnJSONResponse({
+                    status: 'error',
+                    message: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+        
+        // 读取文本
+        function readText(accounts) {
+            const storageKey = `text_storage_${accounts}`;
+            const storedData = localStorage.getItem(storageKey);
+            
+            if (!storedData) {
+                return {
+                    status: 'success',
+                    mode: 'r',
+                    accounts: accounts,
+                    text: '',
+                    message: '账号不存在或没有存储内容',
+                    timestamp: new Date().toISOString(),
+                    exists: false
+                };
+            }
+            
+            const data = JSON.parse(storedData);
+            return {
+                status: 'success',
+                mode: 'r',
+                accounts: accounts,
+                text: data.text,
+                createdAt: data.createdAt,
+                lastModified: data.lastModified,
+                timestamp: new Date().toISOString(),
+                exists: true
+            };
+        }
+        
+        // 写入文本（覆盖）
+        function writeText(accounts, text) {
+            const storageKey = `text_storage_${accounts}`;
+            const now = new Date().toISOString();
+            
+            const data = {
+                text: text,
+                createdAt: now,
+                lastModified: now,
+                accessCount: 0
+            };
+            
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            
+            return {
+                status: 'success',
+                mode: 'w',
+                accounts: accounts,
+                text: text,
+                message: '文本写入成功',
+                timestamp: now,
+                operation: 'overwrite'
+            };
+        }
+        
+        // 续写文本（追加）
+        function appendText(accounts, text) {
+            const storageKey = `text_storage_${accounts}`;
+            const storedData = localStorage.getItem(storageKey);
+            const now = new Date().toISOString();
+            
+            let data;
+            if (storedData) {
+                data = JSON.parse(storedData);
+                data.text += text;
+                data.lastModified = now;
+            } else {
+                data = {
+                    text: text,
+                    createdAt: now,
+                    lastModified: now,
+                    accessCount: 0
+                };
+            }
+            
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            
+            return {
+                status: 'success',
+                mode: 'cw',
+                accounts: accounts,
+                text: data.text,
+                appendedText: text,
+                message: '文本续写成功',
+                timestamp: now,
+                operation: 'append'
+            };
+        }
+        
+        // 返回JSON响应
+        function returnJSONResponse(data) {
+            // 设置响应头（虽然GitHub Pages无法修改HTTP头，但浏览器能正确解析内容）
+            try {
+                document.contentType = "application/json";
+            } catch(e) {}
+            
+            // 直接输出JSON
+            document.body.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+        
+        // 测试API功能
+        function testAPI() {
+            const accounts = document.getElementById('accounts').value;
+            const mode = document.getElementById('mode').value;
+            const text = mode === 'r' ? null : document.getElementById('text').value;
+            
+            const result = executeAPIOperation(accounts, mode, text);
+            
+            // 显示结果
+            const resultDiv = document.getElementById('apiResult');
+            const jsonResult = document.getElementById('jsonResult');
+            
+            jsonResult.textContent = JSON.stringify(result, null, 2);
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result success';
+        }
+        
+        // 生成URL
+        function generateURL() {
+            const accounts = document.getElementById('accounts').value;
+            const mode = document.getElementById('mode').value;
+            const text = mode === 'r' ? null : document.getElementById('text').value;
+            
+            if (!accounts || !mode) {
+                alert('请填写账号和模式');
+                return;
+            }
+            
+            if (mode !== 'r' && !text) {
+                alert('该模式需要填写文本内容');
+                return;
+            }
+            
+            let url = `${window.location.origin}${window.location.pathname}?accounts=${encodeURIComponent(accounts)}&mode=${mode}`;
+            
+            if (text) {
+                url += `&text=${encodeURIComponent(text)}`;
+            }
+            
+            const urlResult = document.getElementById('urlResult');
+            const generatedURL = document.getElementById('generatedURL');
+            
+            generatedURL.textContent = url;
+            urlResult.style.display = 'block';
+        }
+        
+        // 复制URL
+        function copyURL() {
+            const url = document.getElementById('generatedURL').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('URL已复制到剪贴板！');
+            });
+        }
+        
+        // 监听模式变化
+        document.getElementById('mode').addEventListener('change', updateUI);
+    </script>
 </body>
 </html>
