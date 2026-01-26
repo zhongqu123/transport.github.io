@@ -1,32 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>我的网站</title>
+    <title>文本传输API</title>
+    <script>
+        // 页面加载时自动处理URL参数
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const text = urlParams.get('trans');
+            
+            if (text) {
+                // 处理文本（示例：转为大写）
+                const processedText = text.toUpperCase();
+                
+                // 返回JSON
+                const response = {
+                    status: "success",
+                    originalText: text,
+                    processedText: processedText,
+                    timestamp: new Date().toISOString()
+                };
+                
+                // 直接输出JSON（兼容API调用）
+                document.body.innerHTML = `<pre>${JSON.stringify(response, null, 2)}</pre>`;
+                
+                // 如果是API调用，设置Content-Type（实际GitHub Pages无法修改HTTP头，但浏览器能正确解析）
+                try {
+                    document.contentType = "application/json";
+                } catch(e) {}
+            } else {
+                document.body.innerHTML = `
+                    <h1>文本传输API</h1>
+                    <p>使用方式：<code>${window.location.host}?trans=你的文本</code></p>
+                    <p>示例：<a href="?trans=HelloWorld">${window.location.host}?trans=HelloWorld</a></p>
+                `;
+            }
+        };
+    </script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 100px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        h1 { font-size: 2.5em; margin-bottom: 20px; }
-        .success {
-            background: white;
-            color: #667eea;
-            padding: 20px;
-            border-radius: 10px;
-            display: inline-block;
-            margin: 20px;
-        }
+        body { font-family: Arial; max-width: 800px; margin: 0 auto; padding: 20px; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <h1>🎉 恭喜！网站创建成功！</h1>
-    <div class="success">
-        ✅ 你的网站已上线<br>
-        地址：https://zhongqu123.github.io/transport.github.io/
-    </div>
-    <p>（注意：GitHub Pages需要等1-2分钟生效）</p>
+    <!-- 内容由JavaScript动态生成 -->
 </body>
 </html>
