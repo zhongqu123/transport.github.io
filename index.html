@@ -168,17 +168,17 @@
         
         <div class="api-info">
             <h3>API 使用说明</h3>
-            <p><strong>URL格式:</strong> <code>你的域名?accounts=用户名&mode=模式&text=文本</code></p>
+            <p><strong>URL格式:</strong> <code>zhongqu123.github.io/transport.github.io?accounts=用户名&mode=模式&text=文本</code></p>
             
             <div class="code-block">
 // 写入文本
-https://你的域名/?accounts=张三&mode=w&text=你好世界
+https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=w&text=你好世界
 
 // 读取文本  
-https://你的域名/?accounts=张三&mode=r
+https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=r
 
 // 续写文本
-https://你的域名/?accounts=张三&mode=cw&text=这是追加的内容
+https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=cw&text=这是追加的内容
             </div>
             
             <p><strong>模式说明:</strong></p>
@@ -248,27 +248,65 @@ https://你的域名/?accounts=张三&mode=cw&text=这是追加的内容
             }
         }
         
-        // 处理URL参数
+        // 处理URL参数（仅在通过URL直接访问API时生效）
         function processURLParameters() {
             const urlParams = new URLSearchParams(window.location.search);
             const accounts = urlParams.get('accounts');
             const mode = urlParams.get('mode');
             const text = urlParams.get('text');
             
-            if (accounts && mode) {
-                // 自动填充表单
-                if (accounts) document.getElementById('accounts').value = accounts;
-                if (mode) document.getElementById('mode').value = mode;
-                if (text) document.getElementById('text').value = text;
-                
-                updateUI();
-                
-                // 执行API操作
-                executeAPIOperation(accounts, mode, text);
+            // 只有当页面是通过API URL直接访问时（有完整参数），才输出JSON
+            if (accounts && mode && window.location.hash !== '#test') {
+                executeAPIOperationForURL(accounts, mode, text);
             }
         }
         
-        // 执行API操作
+        // 专门用于URL访问的API执行函数（会替换页面内容）
+        function executeAPIOperationForURL(accounts, mode, text) {
+            let result;
+            
+            try {
+                // 参数验证
+                if (!accounts) {
+                    throw new Error('缺少必要参数: accounts');
+                }
+                
+                if (!mode) {
+                    throw new Error('缺少必要参数: mode');
+                }
+                
+                if (mode !== 'r' && !text) {
+                    throw new Error(`模式 "${mode}" 需要 text 参数`);
+                }
+                
+                // 执行操作
+                switch(mode) {
+                    case 'r':
+                        result = readText(accounts);
+                        break;
+                    case 'w':
+                        result = writeText(accounts, text);
+                        break;
+                    case 'cw':
+                        result = appendText(accounts, text);
+                        break;
+                    default:
+                        throw new Error(`不支持的模式: ${mode}`);
+                }
+                
+                // 返回JSON响应（替换页面内容）
+                returnJSONResponse(result);
+                
+            } catch (error) {
+                returnJSONResponse({
+                    status: 'error',
+                    message: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+        
+        // 用于页面内测试的API执行函数（不替换页面内容）
         function executeAPIOperation(accounts, mode, text) {
             let result;
             
@@ -301,15 +339,14 @@ https://你的域名/?accounts=张三&mode=cw&text=这是追加的内容
                         throw new Error(`不支持的模式: ${mode}`);
                 }
                 
-                // 返回JSON响应
-                returnJSONResponse(result);
+                return result;
                 
             } catch (error) {
-                returnJSONResponse({
+                return {
                     status: 'error',
                     message: error.message,
                     timestamp: new Date().toISOString()
-                });
+                };
             }
         }
         
@@ -402,7 +439,7 @@ https://你的域名/?accounts=张三&mode=cw&text=这是追加的内容
             };
         }
         
-        // 返回JSON响应
+        // 返回JSON响应（仅用于URL访问时）
         function returnJSONResponse(data) {
             // 设置响应头（虽然GitHub Pages无法修改HTTP头，但浏览器能正确解析内容）
             try {
@@ -427,7 +464,8 @@ https://你的域名/?accounts=张三&mode=cw&text=这是追加的内容
             
             jsonResult.textContent = JSON.stringify(result, null, 2);
             resultDiv.style.display = 'block';
-            resultDiv.className = 'result success';
+            // 根据结果状态设置样式
+            resultDiv.className = `result ${result.status === 'success' ? 'success' : 'error'}`;
         }
         
         // 生成URL
@@ -446,7 +484,7 @@ https://你的域名/?accounts=张三&mode=cw&text=这是追加的内容
                 return;
             }
             
-            let url = `${window.location.origin}${window.location.pathname}?accounts=${encodeURIComponent(accounts)}&mode=${mode}`;
+            let url = `https://zhongqu123.github.io/transport.github.io/?accounts=${encodeURIComponent(accounts)}&mode=${mode}`;
             
             if (text) {
                 url += `&text=${encodeURIComponent(text)}`;
