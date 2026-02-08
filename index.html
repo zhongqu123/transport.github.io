@@ -230,7 +230,7 @@ https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=cw&text=�
     </div>
 
     <script>
-        // 页面加载时处理URL参数
+                // 页面加载时处理URL参数
         window.addEventListener('load', function() {
             processURLParameters();
             updateUI();
@@ -255,217 +255,68 @@ https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=cw&text=�
             const mode = urlParams.get('mode');
             const text = urlParams.get('text');
             
-            // 只有当页面是通过API URL直接访问时（有完整参数），才输出JSON
+            // 只有当页面是通过API URL直接访问时（有完整参数），才调用后端
             if (accounts && mode && window.location.hash !== '#test') {
-                executeAPIOperationForURL(accounts, mode, text);
+                callBackendAPI(accounts, mode, text, true);
             }
         }
         
-        // 专门用于URL访问的API执行函数（会替换页面内容）
-        function executeAPIOperationForURL(accounts, mode, text) {
-            let result;
-            
+        // 调用后端API的核心函数
+        async function callBackendAPI(accounts, mode, text, isURLMode = false) {
             try {
-                // 参数验证
-                if (!accounts) {
-                    throw new Error('缺少必要参数: accounts');
+                // 构造后端请求URL
+                let url = `http://localhost:3000/?accounts=${encodeURIComponent(accounts)}&mode=${mode}`;
+                if (text) {
+                    url += `&text=${encodeURIComponent(text)}`;
                 }
                 
-                if (!mode) {
-                    throw new Error('缺少必要参数: mode');
-                }
+                // 发送请求到后端
+                const response = await fetch(url);
+                const result = await response.json();
                 
-                if (mode !== 'r' && !text) {
-                    throw new Error(`模式 "${mode}" 需要 text 参数`);
-                }
-                
-                // 执行操作
-                switch(mode) {
-                    case 'r':
-                        result = readText(accounts);
-                        break;
-                    case 'w':
-                        result = writeText(accounts, text);
-                        break;
-                    case 'cw':
-                        result = appendText(accounts, text);
-                        break;
-                    default:
-                        throw new Error(`不支持的模式: ${mode}`);
-                }
-                
-                // 返回JSON响应（替换页面内容）
-                returnJSONResponse(result);
-                
-            } catch (error) {
-                returnJSONResponse({
-                    status: 'error',
-                    message: error.message,
-                    timestamp: new Date().toISOString()
-                });
-            }
-        }
-        
-        // 用于页面内测试的API执行函数（不替换页面内容）
-        function executeAPIOperation(accounts, mode, text) {
-            let result;
-            
-            try {
-                // 参数验证
-                if (!accounts) {
-                    throw new Error('缺少必要参数: accounts');
-                }
-                
-                if (!mode) {
-                    throw new Error('缺少必要参数: mode');
-                }
-                
-                if (mode !== 'r' && !text) {
-                    throw new Error(`模式 "${mode}" 需要 text 参数`);
-                }
-                
-                // 执行操作
-                switch(mode) {
-                    case 'r':
-                        result = readText(accounts);
-                        break;
-                    case 'w':
-                        result = writeText(accounts, text);
-                        break;
-                    case 'cw':
-                        result = appendText(accounts, text);
-                        break;
-                    default:
-                        throw new Error(`不支持的模式: ${mode}`);
+                if (isURLMode) {
+                    // URL模式：直接替换页面显示JSON
+                    document.body.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+                } else {
+                    // 页面内测试模式：显示结果
+                    const resultDiv = document.getElementById('apiResult');
+                    const jsonResult = document.getElementById('jsonResult');
+                    
+                    jsonResult.textContent = JSON.stringify(result, null, 2);
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = `result ${result.status === 'success' ? 'success' : 'error'}`;
                 }
                 
                 return result;
-                
             } catch (error) {
-                return {
+                const errorResult = {
                     status: 'error',
-                    message: error.message,
+                    message: `请求后端失败：${error.message}，请检查后端服务是否启动（http://localhost:3000）`,
                     timestamp: new Date().toISOString()
                 };
+                
+                if (isURLMode) {
+                    document.body.innerHTML = `<pre>${JSON.stringify(errorResult, null, 2)}</pre>`;
+                } else {
+                    const resultDiv = document.getElementById('apiResult');
+                    const jsonResult = document.getElementById('jsonResult');
+                    
+                    jsonResult.textContent = JSON.stringify(errorResult, null, 2);
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'result error';
+                }
+                
+                return errorResult;
             }
-        }
-        
-        // 读取文本
-        function readText(accounts) {
-            const storageKey = `text_storage_${accounts}`;
-            const storedData = localStorage.getItem(storageKey);
-            
-            if (!storedData) {
-                return {
-                    status: 'success',
-                    mode: 'r',
-                    accounts: accounts,
-                    text: '',
-                    message: '账号不存在或没有存储内容',
-                    timestamp: new Date().toISOString(),
-                    exists: false
-                };
-            }
-            
-            const data = JSON.parse(storedData);
-            return {
-                status: 'success',
-                mode: 'r',
-                accounts: accounts,
-                text: data.text,
-                createdAt: data.createdAt,
-                lastModified: data.lastModified,
-                timestamp: new Date().toISOString(),
-                exists: true
-            };
-        }
-        
-        // 写入文本（覆盖）
-        function writeText(accounts, text) {
-            const storageKey = `text_storage_${accounts}`;
-            const now = new Date().toISOString();
-            
-            const data = {
-                text: text,
-                createdAt: now,
-                lastModified: now,
-                accessCount: 0
-            };
-            
-            localStorage.setItem(storageKey, JSON.stringify(data));
-            
-            return {
-                status: 'success',
-                mode: 'w',
-                accounts: accounts,
-                text: text,
-                message: '文本写入成功',
-                timestamp: now,
-                operation: 'overwrite'
-            };
-        }
-        
-        // 续写文本（追加）
-        function appendText(accounts, text) {
-            const storageKey = `text_storage_${accounts}`;
-            const storedData = localStorage.getItem(storageKey);
-            const now = new Date().toISOString();
-            
-            let data;
-            if (storedData) {
-                data = JSON.parse(storedData);
-                data.text += text;
-                data.lastModified = now;
-            } else {
-                data = {
-                    text: text,
-                    createdAt: now,
-                    lastModified: now,
-                    accessCount: 0
-                };
-            }
-            
-            localStorage.setItem(storageKey, JSON.stringify(data));
-            
-            return {
-                status: 'success',
-                mode: 'cw',
-                accounts: accounts,
-                text: data.text,
-                appendedText: text,
-                message: '文本续写成功',
-                timestamp: now,
-                operation: 'append'
-            };
-        }
-        
-        // 返回JSON响应（仅用于URL访问时）
-        function returnJSONResponse(data) {
-            // 设置响应头（虽然GitHub Pages无法修改HTTP头，但浏览器能正确解析内容）
-            try {
-                document.contentType = "application/json";
-            } catch(e) {}
-            
-            // 直接输出JSON
-            document.body.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
         }
         
         // 测试API功能
-        function testAPI() {
+        async function testAPI() {
             const accounts = document.getElementById('accounts').value;
             const mode = document.getElementById('mode').value;
             const text = mode === 'r' ? null : document.getElementById('text').value;
             
-            const result = executeAPIOperation(accounts, mode, text);
-            
-            // 显示结果
-            const resultDiv = document.getElementById('apiResult');
-            const jsonResult = document.getElementById('jsonResult');
-            
-            jsonResult.textContent = JSON.stringify(result, null, 2);
-            resultDiv.style.display = 'block';
-            // 根据结果状态设置样式
-            resultDiv.className = `result ${result.status === 'success' ? 'success' : 'error'}`;
+            await callBackendAPI(accounts, mode, text);
         }
         
         // 生成URL
@@ -484,8 +335,8 @@ https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=cw&text=�
                 return;
             }
             
-            let url = `https://zhongqu123.github.io/transport.github.io/?accounts=${encodeURIComponent(accounts)}&mode=${mode}`;
-            
+            // 生成后端访问的URL
+            let url = `http://localhost:3000/?accounts=${encodeURIComponent(accounts)}&mode=${mode}`;
             if (text) {
                 url += `&text=${encodeURIComponent(text)}`;
             }
