@@ -168,17 +168,17 @@
         
         <div class="api-info">
             <h3>API 使用说明</h3>
-            <p><strong>URL格式:</strong> <code>zhongqu123.github.io/transport.github.io?accounts=用户名&mode=模式&text=文本</code></p>
+            <p><strong>URL格式:</strong> <code>rk1198tr8101.vicp.fun?accounts=用户名&mode=模式&text=文本</code></p>
             
             <div class="code-block">
 // 写入文本
-https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=w&text=你好世界
+http://rk1198tr8101.vicp.fun/?accounts=张三&mode=w&text=你好世界
 
 // 读取文本  
-https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=r
+http://rk1198tr8101.vicp.fun/?accounts=张三&mode=r
 
 // 续写文本
-https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=cw&text=这是追加的内容
+http://rk1198tr8101.vicp.fun/?accounts=张三&mode=cw&text=这是追加的内容
             </div>
             
             <p><strong>模式说明:</strong></p>
@@ -230,7 +230,10 @@ https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=cw&text=�
     </div>
 
     <script>
-                       // 页面加载时处理URL参数
+        // 核心修改：替换为花生壳固定域名
+        const BACKEND_BASE_URL = 'http://rk1198tr8101.vicp.fun';
+        
+        // 页面加载时处理URL参数
         window.addEventListener('load', function() {
             processURLParameters();
             updateUI();
@@ -264,8 +267,8 @@ https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=cw&text=�
         // 调用后端API的核心函数
         async function callBackendAPI(accounts, mode, text, isURLMode = false) {
             try {
-                // 构造后端请求URL
-                let url = `http://localhost:3000/?accounts=${encodeURIComponent(accounts)}&mode=${mode}`;
+                // 构造后端请求URL（使用花生壳域名）
+                let url = `${BACKEND_BASE_URL}/?accounts=${encodeURIComponent(accounts)}&mode=${mode}`;
                 if (text) {
                     url += `&text=${encodeURIComponent(text)}`;
                 }
@@ -291,7 +294,7 @@ https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=cw&text=�
             } catch (error) {
                 const errorResult = {
                     status: 'error',
-                    message: `请求后端失败：${error.message}，请检查后端服务是否启动（http://localhost:3000）`,
+                    message: `请求后端失败：${error.message}，请检查后端服务和花生壳映射是否正常（${BACKEND_BASE_URL}）`,
                     timestamp: new Date().toISOString()
                 };
                 
@@ -335,8 +338,8 @@ https://zhongqu123.github.io/transport.github.io/?accounts=张三&mode=cw&text=�
                 return;
             }
             
-            // 生成后端访问的URL
-            let url = `http://localhost:3000/?accounts=${encodeURIComponent(accounts)}&mode=${mode}`;
+            // 生成后端访问的URL（使用花生壳域名）
+            let url = `${BACKEND_BASE_URL}/?accounts=${encodeURIComponent(accounts)}&mode=${mode}`;
             if (text) {
                 url += `&text=${encodeURIComponent(text)}`;
             }
